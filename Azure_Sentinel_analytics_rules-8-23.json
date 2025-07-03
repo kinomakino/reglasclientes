@@ -1,0 +1,807 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/4c131bc4-e51e-42a5-8c26-0153211976d0')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/4c131bc4-e51e-42a5-8c26-0153211976d0')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-23-Usuarios que en 3 horas, varias ip, nunca vistas en los 14 días.",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let query_period = 3h;       // Intervalo de tiempo reciente donde ocurre el evento sospechoso\nlet look_back = 14d;         // Ventana histórica para comparar actividad\nlet SuspiciousUPNs =\n    union SigninLogs, AADNonInteractiveUserSignInLogs\n    | where TimeGenerated > ago(query_period)\n    | summarize IPCount = dcount(IPAddress) by UserPrincipalName\n    | where IPCount > 1;\nunion SigninLogs, AADNonInteractiveUserSignInLogs\n| where TimeGenerated > ago(look_back)\n| join kind=inner (SuspiciousUPNs) on UserPrincipalName\n| summarize \n    FirstSeen = arg_min(TimeGenerated, IPAddress),\n    LastSeen = max(TimeGenerated),\n    Count = count(),\n    SigninTypes = make_set(Category),\n    AppsUsed = make_set(AppDisplayName),\n    AppCount = dcount(AppId)\n    by UserPrincipalName, IPAddress\n| where FirstSeen > ago(query_period)\n| project-reorder FirstSeen, LastSeen, UserPrincipalName, IPAddress, AppCount, AppsUsed, SigninTypes, Count\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/ac16eaa6-862f-43c2-b4bb-d6360a6c8b14')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/ac16eaa6-862f-43c2-b4bb-d6360a6c8b14')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-22-Cambio de identidad en aplicación",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where OperationNameValue == \"Microsoft.Authorization/roleAssignments/write\"\n      or OperationNameValue has \"Microsoft.Graph\" // Por si se usa Graph API\n| where Properties has \"Update application - Certificates and secrets management\"\n| project TimeGenerated,\n          Caller,\n          ResourceGroup,\n          ResourceProviderValue,\n          OperationNameValue,\n          ActivityStatusValue,\n          Properties,\n          SubscriptionId\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/476ef918-bb6a-4d0f-9136-3237f9fee091')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/476ef918-bb6a-4d0f-9136-3237f9fee091')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-21-Usuario añadido a roles Admin",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AuditLogs\n| where OperationName == \"Add member to role.\"\n| project TimeGenerated,\n          Initiator = tostring(InitiatedBy.user.userPrincipalName),\n          TargetResource = tostring(TargetResources[0].displayName),\n          OperationName,\n          Result\n| where TargetResource has_any (\"Admin\", \"Administrator\")\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/01c58355-451d-4708-9952-f8e44bc16ced')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/01c58355-451d-4708-9952-f8e44bc16ced')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-20-Actividad sospechosa sobre un KeyVault",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where OperationNameValue in~ (\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/UPDATE/ACTION\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/CREATE\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/CREATE/ACTION\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/IMPORT/ACTION\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/RECOVER/ACTION\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/RESTORE/ACTION\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/DELETE\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/BACKUP/ACTION\",\n    \"MICROSOFT.KEYVAULT/VAULTS/KEYS/PURGE/ACTION\"\n)\n| project TimeGenerated, Caller, OperationNameValue, ActivityStatusValue, ResourceGroup, ResourceId, SubscriptionId\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/da3af421-5aee-4c60-947c-de31d8ca9310')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/da3af421-5aee-4c60-947c-de31d8ca9310')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-19-Borrado y restauración de ficheros",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let SourcePath = \"Service Catalog/ServiceCatalog/\";\nlet recycled = OfficeActivity\n| where Operation in (\"FileRecycled\", \"FolderRecycled\")\n| where SourceRelativeUrl has SourcePath\n| where ItemType <> \"Folder\"\n| project OfficeObjectId, TimeRecycled = TimeGenerated, RecycledUser = UserId, Site_Url, SourceRelativeUrl, SourceFileName, SourceFileExtension, ItemType, OfficeWorkload;\nlet restored = OfficeActivity\n| where Operation in (\"FileRestored\", \"FolderRestored\")\n| where SourceRelativeUrl has SourcePath\n| where ItemType <> \"Folder\"\n| project OfficeObjectId, TimeRestored = TimeGenerated, RestoredUser = UserId;\nrecycled\n| join kind=leftouter restored on OfficeObjectId\n| project Site_Url, SourceFileName, SourceRelativeUrl, SourceFileExtension, ItemType, OfficeWorkload, RecycledUser, TimeRecycled, RestoredUser, TimeRestored\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/a7b13825-3046-424a-b7b8-ccf2199ebe91')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/a7b13825-3046-424a-b7b8-ccf2199ebe91')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-18-Nueva Services Principal Name creado",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where ResourceProviderValue == \"Microsoft.Authorization\"\n| where OperationNameValue has \"Add service principal\"\n    or Properties has \"Add service principal\"\n| extend InitiatedBy = Caller,\n         ActivityTime = TimeGenerated\n| project ActivityTime, InitiatedBy, ResourceGroup, ResourceId, OperationNameValue, Properties, SubscriptionId\n| order by ActivityTime desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/fc3dac5e-f740-472d-ac19-f4a079cc220f')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/fc3dac5e-f740-472d-ac19-f4a079cc220f')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-17-Nuevo servidor ADFS",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where CategoryValue == \"Administrative\"\n| where ResourceProviderValue == \"Microsoft.ADHybridHealthService\"\n| where ResourceId has \"AdFederationService\"\n| where OperationNameValue == \"Microsoft.ADHybridHealthService/services/servicemembers/action\"\n| extend InitiatedBy = Caller,\n         ActivityTime = TimeGenerated\n| project ActivityTime, InitiatedBy, ResourceGroup, ResourceId, OperationNameValue, SubscriptionId, CorrelationId\n| order by ActivityTime desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/15f145f4-edfc-4580-96ef-ca86ec11123a')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/15f145f4-edfc-4580-96ef-ca86ec11123a')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-16-Desactivación de MFA",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AuditLogs\n| where OperationName == \"Disable Strong Authentication.\"\n| where Result == \"success\"\n| extend UserPrincipalName = tostring(InitiatedBy.user.userPrincipalName),\n         App = tostring(InitiatedBy.app.displayName),\n         IPAddress = tostring(InitiatedBy.user.ipAddress),\n         Actor = tostring(InitiatedBy.user.displayName)\n| project TimeGenerated, UserPrincipalName, Actor, App, IPAddress, OperationName, Result\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/313fad55-75f2-4e12-9846-651b3e9f6bee')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/313fad55-75f2-4e12-9846-651b3e9f6bee')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-15- Cambios en redes",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where (OperationNameValue startswith \"MICROSOFT.NETWORK/VIRTUALNETWORKGATEWAYS/\"\n      or OperationNameValue startswith \"MICROSOFT.NETWORK/VIRTUALNETWORKS/\")\n  and (OperationNameValue endswith \"/WRITE\"\n      or OperationNameValue endswith \"/DELETE\")\n| extend\n    User = Caller,\n    Resource = ResourceId,\n    Action = OperationNameValue,\n    Status = ActivityStatusValue\n| project TimeGenerated, User, Action, Resource, Status, CallerIpAddress, Category, ActivitySubstatusValue\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/75b1460e-ec94-4402-b03c-97096a2d05c4')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/75b1460e-ec94-4402-b03c-97096a2d05c4')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-14- Modificación grupo de seguridad de red en Aplicaciones",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where OperationNameValue in~ (\n    \"MICROSOFT.NETWORK/APPLICATIONSECURITYGROUPS/WRITE\",\n    \"MICROSOFT.NETWORK/APPLICATIONSECURITYGROUPS/DELETE\"\n)\n| extend\n    User = Caller,\n    Resource = ResourceId,\n    Action = OperationNameValue,\n    Status = ActivityStatusValue\n| project TimeGenerated, User, Action, Resource, Status, CallerIpAddress, Category, ActivitySubstatusValue\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/c83d2678-4d91-45a1-a2da-29fd640b95c0')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/c83d2678-4d91-45a1-a2da-29fd640b95c0')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-13-Asignación de roles desde ip Nunca vista",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "let lookback = 7d;\nlet startTime = ago(lookback);\nlet currentEvents = AzureActivity\n| where TimeGenerated > startTime\n| where OperationNameValue =~ \"Microsoft.Authorization/roleAssignments/write\"\n| extend IPAddress = CallerIpAddress, User = Caller, Resource = ResourceId;\nlet historicalIPs = AzureActivity\n| where TimeGenerated between (startTime - 30d .. startTime)\n| where OperationNameValue =~ \"Microsoft.Authorization/roleAssignments/write\"\n| summarize KnownIPs = make_set(CallerIpAddress);\ncurrentEvents\n| where isnotempty(IPAddress) and not(IPAddress in (historicalIPs))\n| project TimeGenerated, User, IPAddress, Resource, OperationNameValue, ActivityStatusValue\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/ee435826-f241-4291-812d-e262f207fe33')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/ee435826-f241-4291-812d-e262f207fe33')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-12- Cambios en VPN",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where OperationNameValue in~ (\n    \"MICROSOFT.NETWORK/VPNGATEWAYS/VPNCONNECTIONS/WRITE\",\n    \"MICROSOFT.NETWORK/VPNGATEWAYS/VPNCONNECTIONS/DELETE\"\n)\n| extend\n    User = Caller,\n    Resource = ResourceId,\n    Action = OperationNameValue,\n    Status = ActivityStatusValue\n| project TimeGenerated, User, Action, Resource, Status, ActivitySubstatusValue, Category, CallerIpAddress\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/747199de-5a07-4fd0-be84-b2390593535a')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/747199de-5a07-4fd0-be84-b2390593535a')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "Seguridadsi-11-Exportación PST",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AuditLogs\n| where OperationName =~ \"New-ComplianceSearchAction\"\n| extend\n    Actor = tostring(InitiatedBy.user.userPrincipalName),\n    App = tostring(InitiatedBy.app.displayName)\n| where tostring(TargetResources) has \"Export\" and tostring(TargetResources) has \"pst\"\n| project TimeGenerated, OperationName, Actor, App, TargetResources\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/01335b28-38bc-46fe-8e19-68d5d2c42a46')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/01335b28-38bc-46fe-8e19-68d5d2c42a46')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-10-Usuario bloqueado por envío masivo de Spam",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AuditLogs\n| where OperationName has \"User restricted from sending email\"\n| project\n    TimeGenerated,\n    OperationName,\n    UserId = tostring(InitiatedBy.user.userPrincipalName),\n    AppName = tostring(InitiatedBy.app.displayName),\n    IPAddress = tostring(InitiatedBy.user.ipAddress),\n    Result = tostring(Result),\n    CorrelationId\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/da0cbebb-08aa-4147-aa8c-373c79839107')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/da0cbebb-08aa-4147-aa8c-373c79839107')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-9-Intento de cambio de contraseña con palabra prohibida",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AuditLogs\n| where ActivityDisplayName contains \"Password\"  \n| where ResultReason contains  \"fuzzypolicy\"\n| extend\n    ChangedUser = tostring(TargetResources[0].userPrincipalName),\n    InitiatedByUPN = tostring(InitiatedBy.user.userPrincipalName),\n    InitiatedByApp = tostring(InitiatedBy.app.displayName),\n    InitiatedByIP = tostring(InitiatedBy.user.ipAddress)\n| project\n    TimeGenerated,\n    OperationName,\n    ChangedUser,\n    InitiatedByUPN,\n    InitiatedByApp,\n    InitiatedByIP,\n    ActivityDisplayName,\n    Result,\n    ResultReason,\n    AADTenantId,\n    CorrelationId\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/245e3c67-a777-4da2-b998-7fc22b91b945')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/245e3c67-a777-4da2-b998-7fc22b91b945')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "SeguridadSi-8-Acceso portal Intune",
+                "description": "",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AuditLogs\n| extend AdditionalDetailsStr = tostring(AdditionalDetails)\n| where OperationName == \"UserLoggedIn\"\n    and AdditionalDetailsStr has \"9ba1a5c7-f17a-4de9-a1f1-6178c8d51223\"\n| project\n    TimeGenerated,\n    Identity,\n    OperationName,\n    AdditionalDetailsStr\n| order by TimeGenerated desc\n\n",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT5H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [],
+                "techniques": [],
+                "subTechniques": [],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": null,
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        },
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/404d0ed9-b606-4da1-ab5c-4dc73371e897')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/404d0ed9-b606-4da1-ab5c-4dc73371e897')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2023-12-01-preview",
+            "properties": {
+                "displayName": "MFA Spamming followed by Successful login",
+                "description": "Identifies MFA Spamming followed by Successful logins and by a successful authentication within a given time window.\nDefault Failure count is 10 and 1 successful login with default Time Window is 5 minutes.",
+                "severity": "High",
+                "enabled": true,
+                "query": "// Filter for sign-in logs ingested within the last day\nSigninLogs\n| where ingestion_time() > ago(1d)\n// Filter for records with AuthenticationRequirement set to multiFactorAuthentication\n| where AuthenticationRequirement == \"multiFactorAuthentication\"\n// Extract information from dynamic columns DeviceDetail and LocationDetails\n| extend DeviceDetail = todynamic(DeviceDetail), LocationDetails = todynamic(LocationDetails)\n// Extract specific attributes from DeviceDetail and LocationDetails\n| extend\n      OS = tostring(DeviceDetail.operatingSystem),\n      Browser = tostring(DeviceDetail.browser),\n      State = tostring(LocationDetails.state),\n      City = tostring(LocationDetails.city),\n      Region = tostring(LocationDetails.countryOrRegion)\n// Expand multi-value property AuthenticationDetails into separate records\n| mv-expand todynamic(AuthenticationDetails)\n// Parse AuthResult from JSON in AuthenticationDetails and convert to string\n| extend AuthResult = tostring(parse_json(AuthenticationDetails).authenticationStepResultDetail)\n// Summarize data by aggregating statistics for each user, IP, and AuthResult\n| summarize FailedAttempts = countif(AuthResult == \"MFA denied; user declined the authentication\" or AuthResult == \"MFA denied; user did not respond to mobile app notification\"), SuccessfulAttempts = countif(AuthResult == \"MFA successfully completed\"), InvolvedOS = make_set(OS, 5), InvolvedBrowser = make_set(Browser), StartTime = min(TimeGenerated), EndTime = max(TimeGenerated) by UserPrincipalName, IPAddress, State, City, Region\n// Calculate AuthenticationWindow by finding time difference between start and end times\n| extend AuthenticationWindow = (EndTime - StartTime)\n// Filter for records with more than 10 failed attempts in 5-minute window and at least 1 successful attempt\n| where FailedAttempts > 2 and AuthenticationWindow <= 5m and SuccessfulAttempts >= 1\n// Extract user's name and UPN suffix using split function\n| extend Name = tostring(split(UserPrincipalName, '@', 0)[0]), UPNSuffix = tostring(split(UserPrincipalName, '@', 1)[0])\n",
+                "queryFrequency": "P1D",
+                "queryPeriod": "P1D",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT1H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "CredentialAccess"
+                ],
+                "techniques": [
+                    "T1110"
+                ],
+                "subTechniques": [],
+                "alertRuleTemplateName": "a8cc6d5c-4e7e-4b48-b4ac-d8a116c62a8b",
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "UserPrincipalName"
+                            },
+                            {
+                                "identifier": "Name",
+                                "columnName": "Name"
+                            },
+                            {
+                                "identifier": "UPNSuffix",
+                                "columnName": "UPNSuffix"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": "1.0.4"
+            }
+        }
+    ]
+}
