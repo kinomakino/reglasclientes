@@ -1,0 +1,32 @@
+id: 98d9487f-c4e4-462e-aec3-b1d505a063de')]
+name: SeguridadSi-4-Descarga de PST
+description: ''
+severity: Medium
+requiredDataConnectors:
+- connectorId: AzureActiveDirectory
+  dataTypes:
+  - AuditLogs
+queryFrequency: PT5H
+queryPeriod: PT5H
+triggerOperator: GreaterThan
+triggerThreshold: 0
+suppressionDuration: PT5H
+suppressionEnabled: false
+tactics: []
+query: "AuditLogs\n| where OperationName == \"New-ComplianceSearchAction\"\n| where isnotempty(AdditionalDetails)\n| extend\
+  \ Payload = tostring(parse_json(AdditionalDetails))\n| where Payload has \"Export\" and Payload has \"pst\"\n| project\n\
+  \    TimeGenerated,\n    Identity,\n    OperationName,\n    Payload\n| order by TimeGenerated desc\n\n"
+eventGroupingSettings:
+  aggregationKind: SingleAlert
+incidentConfiguration:
+  createIncident: true
+  groupingConfiguration:
+    enabled: false
+    reopenClosedIncident: false
+    lookbackDuration: PT5H
+    matchingMethod: AllEntities
+    groupByEntities: []
+    groupByAlertDetails: []
+    groupByCustomDetails: []
+kind: Scheduled
+version: 1.0.0

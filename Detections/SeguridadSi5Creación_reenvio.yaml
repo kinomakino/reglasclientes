@@ -1,0 +1,36 @@
+id: ff1bf9d0-25cc-4d0f-8cee-67c45bcce471')]
+name: SeguridadSi-5-Creación re-envio
+description: ''
+severity: Medium
+requiredDataConnectors:
+- connectorId: AzureActiveDirectory
+  dataTypes:
+  - AuditLogs
+queryFrequency: PT5H
+queryPeriod: PT5H
+triggerOperator: GreaterThan
+triggerThreshold: 0
+suppressionDuration: PT5H
+suppressionEnabled: false
+tactics: []
+query: "AuditLogs\n| where OperationName == \"UpdateInboxRules\"\n    or OperationName == \"Set-Mailbox\"\n    or OperationName\
+  \ == \"New-InboxRule\"\n    or OperationName == \"Set-InboxRule\"\n| extend AdditionalDetailsStr = tostring(AdditionalDetails)\n\
+  | where AdditionalDetailsStr has \"Forward\"\n    or AdditionalDetailsStr has \"Recipients\"\n    or AdditionalDetailsStr\
+  \ has \"ForwardingSmtpAddress\"\n    or AdditionalDetailsStr has \"ForwardingAddress\"\n    or AdditionalDetailsStr has\
+  \ \"ForwardAsAttachmentTo\"\n    or AdditionalDetailsStr has \"ForwardTo\"\n    or AdditionalDetailsStr has \"RedirectTo\"\
+  \n    or AdditionalDetailsStr has \"RedirectToRecipients\"\n| project TimeGenerated, Identity, OperationName, AdditionalDetailsStr\n\
+  | order by TimeGenerated desc\n\n"
+eventGroupingSettings:
+  aggregationKind: SingleAlert
+incidentConfiguration:
+  createIncident: true
+  groupingConfiguration:
+    enabled: false
+    reopenClosedIncident: false
+    lookbackDuration: PT5H
+    matchingMethod: AllEntities
+    groupByEntities: []
+    groupByAlertDetails: []
+    groupByCustomDetails: []
+kind: Scheduled
+version: 1.0.0

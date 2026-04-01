@@ -1,0 +1,47 @@
+id: 71432a53-2831-411f-9219-e2b9435b2698')]
+name: SeguridadSi-3-Operaciones raras con ficheros
+description: ''
+severity: Medium
+requiredDataConnectors:
+- connectorId: AzureActiveDirectory
+  dataTypes:
+  - SigninLogs
+- connectorId: MicrosoftThreatProtection
+  dataTypes:
+  - CloudAppEvents
+queryFrequency: PT5H
+queryPeriod: PT5H
+triggerOperator: GreaterThan
+triggerThreshold: 0
+suppressionDuration: PT5H
+suppressionEnabled: false
+tactics: []
+query: "SigninLogs\n| where CreatedDateTime between (ago(7d) .. now())\n| where isnotempty(UserId) and isnotempty(OriginalRequestId)\n\
+  | where ResultType == \"0\"\n| where RiskLevelDuringSignIn == \"high\"\n| project\n    RiskLevelDuringSignIn,\n    UserId,\n\
+  \    CreatedDateTime,\n    SessionId = OriginalRequestId\n| join kind=inner (\n    CloudAppEvents\n    | where TimeGenerated\
+  \ between (ago(7d) .. now())\n    | where ApplicationId in (20892, 15600)\n    | where isnotempty(AccountObjectId)\n   \
+  \ | where ActionType in (\"FileDeleted\", \"FileRecycled\", \"FileDeletedFirstStageRecycleBin\",\n                     \
+  \      \"FileDeletedSecondStageRecycleBin\", \"FileVersionsAllMinorsRecycled\",\n                           \"FileVersionRecycled\"\
+  , \"FileVersionsAllRecycled\")\n    | extend SessionId = tostring(RawEventData.AppAccessContext.AADSessionId)\n    | where\
+  \ isnotempty(SessionId)\n    | project\n        UserId = AccountObjectId,\n        AccountDisplayName,\n        ApplicationId,\n\
+  \        SessionId,\n        ActionType,\n        TimeGenerated,\n        ReportId\n) on UserId, SessionId\n| summarize\n\
+  \    Count = count(),\n    (Timestamp, ReportId) = arg_min(TimeGenerated, ReportId)\n    by UserId, AccountDisplayName,\
+  \ ApplicationId, ActionType, Time = bin(TimeGenerated, 5m)\n| summarize\n    TotalCount = countif(Count > 50),\n    (Timestamp,\
+  \ ReportId) = arg_min(Timestamp, ReportId)\n    by UserId, AccountDisplayName, ApplicationId\n| where TotalCount >= 3\n\
+  | project\n    UserId,\n    AccountDisplayName,\n    ApplicationId,\n    TotalCount,\n    ReportId,\n    Timestamp\n| extend\n\
+  \    NTDomain = tostring(split(AccountDisplayName, '\\\\', 0)[0]),\n    Name = tostring(split(AccountDisplayName, '\\\\\
+  ', 1)[0])\n\n"
+eventGroupingSettings:
+  aggregationKind: SingleAlert
+incidentConfiguration:
+  createIncident: true
+  groupingConfiguration:
+    enabled: false
+    reopenClosedIncident: false
+    lookbackDuration: PT5H
+    matchingMethod: AllEntities
+    groupByEntities: []
+    groupByAlertDetails: []
+    groupByCustomDetails: []
+kind: Scheduled
+version: 1.0.0

@@ -1,0 +1,32 @@
+id: a95da86b-8c60-47f8-ab3f-0258e0bbbb4e')]
+name: SeguridadSi-6-Añadir dominio Federado
+description: ''
+severity: Medium
+requiredDataConnectors:
+- connectorId: AzureActiveDirectory
+  dataTypes:
+  - AuditLogs
+queryFrequency: PT5H
+queryPeriod: PT5H
+triggerOperator: GreaterThan
+triggerThreshold: 0
+suppressionDuration: PT5H
+suppressionEnabled: false
+tactics: []
+query: "AuditLogs\n| extend OperationLower = tolower(OperationName)\n| where OperationLower has \"domain\"\n    and (OperationLower\
+  \ has \"add\" or OperationLower has \"new\")\n| project\n    TimeGenerated,\n    Identity,\n    OperationName,\n    AdditionalDetails\n\
+  | order by TimeGenerated desc"
+eventGroupingSettings:
+  aggregationKind: SingleAlert
+incidentConfiguration:
+  createIncident: true
+  groupingConfiguration:
+    enabled: false
+    reopenClosedIncident: false
+    lookbackDuration: PT5H
+    matchingMethod: AllEntities
+    groupByEntities: []
+    groupByAlertDetails: []
+    groupByCustomDetails: []
+kind: Scheduled
+version: 1.0.0
